@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import glob
 import os
+import sys
+import time
 
 def load_data(filepath):
     try:
@@ -103,6 +105,16 @@ def backtest_fvg_trend(df, rr_ratio=3.0, spread_points=15):
                     
     return results
 
+def print_progress_bar(iteration, total, prefix='', suffix='', decimals=1, length=30, fill='█'):
+    """Prints a clean terminal progress bar for high-quality user experience."""
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filled_length = int(length * iteration // total)
+    bar = fill * filled_length + '-' * (length - filled_length)
+    sys.stdout.write(f'\r{prefix} |{bar}| {percent}% {suffix}')
+    sys.stdout.flush()
+    if iteration == total:
+        sys.stdout.write('\n')
+
 def run_analysis():
     files = glob.glob("csv files/*.csv")
     print("=========================================================================")
@@ -113,19 +125,33 @@ def run_analysis():
     print("  - Strategy: Enter on FVG Pullback test, targeting highly efficient zones")
     print("  - Risk-to-Reward: High 3.0R Targets")
     print("-------------------------------------------------------------------------")
-    print(f"{'File':<25} | {'Trades':<8} | {'Win Rate':<10} | {'Total PnL (R)'}")
-    print("-------------------------------------------------------------------------")
     
-    for file in files:
+    total_files = len(files)
+    results_dict = {}
+    
+    for idx, file in enumerate(files):
+        print_progress_bar(idx, total_files, prefix='Backtesting Progress', suffix=f'Processing: {os.path.basename(file)}', length=25)
         df = load_data(file)
         if df is not None:
             results = backtest_fvg_trend(df, rr_ratio=3.0, spread_points=15)
-            if results:
-                win_rate = (sum(1 for r in results if r > 0) / len(results)) * 100
-                total_pnl = sum(results)
-                print(f"{os.path.basename(file):<25} | {len(results):<8} | {win_rate:<9.1f}% | {total_pnl:+.2f}R")
-            else:
-                print(f"{os.path.basename(file):<25} | 0        | 0.0%       | +0.00R")
+            results_dict[os.path.basename(file)] = results
+        else:
+            results_dict[os.path.basename(file)] = []
+        time.sleep(0.1)  # tiny sleep for visual effect of progress bar
+        
+    print_progress_bar(total_files, total_files, prefix='Backtesting Progress', suffix='Done!                    ', length=25)
+    print("\n-------------------------------------------------------------------------")
+    print(f"{'File':<25} | {'Trades':<8} | {'Win Rate':<10} | {'Total PnL (R)'}")
+    print("-------------------------------------------------------------------------")
+    
+    for filename, results in results_dict.items():
+        if results:
+            win_rate = (sum(1 for r in results if r > 0) / len(results)) * 100
+            total_pnl = sum(results)
+            print(f"{filename:<25} | {len(results):<8} | {win_rate:<9.1f}% | {total_pnl:+.2f}R")
+        else:
+            print(f"{filename:<25} | 0        | 0.0%       | +0.00R")
+    print("=========================================================================")
 
 if __name__ == "__main__":
     run_analysis()
