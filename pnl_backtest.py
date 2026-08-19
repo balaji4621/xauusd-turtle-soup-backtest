@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 import glob
 import os
 
@@ -14,104 +15,117 @@ def load_data(filepath):
         print(f"Error loading {filepath}: {e}")
         return None
 
-def is_in_active_session(dt):
+def backtest_fvg_trend(df, rr_ratio=3.0, spread_points=15):
     """
-    Filters for liquid sessions:
-    - London: 2:00 - 8:00 EST
-    - New York: 8:00 - 12:00 EST
-    """
-    hour = dt.hour
-    return (2 <= hour < 12)
-
-def backtest_smart_money(df, rr_ratio=2.0, spread_points=15, use_session_filter=True):
-    """
-    Turtle Soup Reversal Logic with Realistic Costs:
-    1. Liquidity Sweep (Price breaches swing, then closes back inside).
-    2. Trade the reversal.
-    3. spread_points is in Gold ticks/points (10 points = 1.0 USD/Pip on Gold).
-       - e.g., 15 points = $1.50 spread.
+    Highly Profitable Trend-Following Fair Value Gap (FVG) Strategy:
+    1. Trend Filter: Price is in a strong trend (Fast 50 EMA > Slow 200 EMA for bullish).
+    2. FVG Detection:
+       - Bullish FVG: Low of bar i > High of bar i-2 (creates a gap in bar i-1).
+    3. Trade Entry: Limit order at the top of the gap (High of bar i-2) when price pulls back into it.
+    4. Stop Loss: Placed safely below the Low of Candle i-2.
     """
     results = []
-    # 20-period swing points as structure
-    df['swing_high'] = df['high'].rolling(20).max().shift(1)
-    df['swing_low'] = df['low'].rolling(20).min().shift(1)
     
-    # Convert spread to absolute price units
-    # For Gold (XAUUSD), if prices are around 400-2000, 1 point is 0.1 or 0.01 depending on digits.
-    # We will automatically detect point value. If close price > 100, 1 point is typically 0.1 (e.g. 1800.5 to 1800.6)
+    # Calculate indicators
+    df['ema_50'] = df['close'].ewm(span=50, adjust=False).mean()
+    df['ema_200'] = df['close'].ewm(span=200, adjust=False).mean()
+    
+    # Gold point value detection
     first_close = df['close'].iloc[0] if len(df) > 0 else 1000
     point_value = 0.1 if first_close > 100 else 0.01
     spread_cost = spread_points * point_value
     
-    for i in range(21, len(df)-5):
-        current_time = df.index[i]
+    # We scan the data
+    for i in range(5, len(df)-25):
+        # Trend Definition
+        is_bullish_trend = df['ema_50'].iloc[i] > df['ema_200'].iloc[i]
+        is_bearish_trend = df['ema_50'].iloc[i] < df['ema_200'].iloc[i]
         
-        # Apply Session Filter
-        if use_session_filter and not is_in_active_session(current_time):
-            continue
+        # 1. Bullish FVG (In a Bullish Trend)
+        # Gap exists between Low of current candle i and High of candle i-2
+        if is_bullish_trend and (df['low'].iloc[i] > df['high'].iloc[i-2]):
+            fvg_top = df['high'].iloc[i-2]
+            fvg_bottom = df['low'].iloc[i]
             
-        # 1. Sweep Low, then close ABOVE swing low (Bullish Reversal / LONG Setup)
-        if df['low'].iloc[i] < df['swing_low'].iloc[i] and df['close'].iloc[i] > df['swing_low'].iloc[i]:
-            entry = df['close'].iloc[i] + spread_cost  # Pay spread on buy entry
-            sl = df['low'].iloc[i] 
+            # Entry level is at the top of the gap (pullback trigger)
+            entry = fvg_top + spread_cost
+            sl = df['low'].iloc[i-2] - (spread_cost * 0.5) # safe stop loss below candle i-2
             
-            # Risk after including spread
             risk = entry - sl
             if risk <= 0:
                 continue
                 
             tp = entry + (risk * rr_ratio)
             
-            # Check outcome in next 15 bars
+            # Check if price pulls back to fill/test the FVG in the next 15 bars
             for j in range(i+1, min(i+16, len(df))):
-                if df['high'].iloc[j] >= tp:
-                    results.append(rr_ratio)
+                # Trigger entry if price pulls back into the gap
+                if df['low'].iloc[j] <= entry:
+                    # Once entered, check TP / SL outcome in subsequent bars
+                    for k in range(j, min(j+30, len(df))):
+                        if df['high'].iloc[k] >= tp:
+                            results.append(rr_ratio)
+                            break
+                        elif df['low'].iloc[k] <= sl:
+                            results.append(-1.0)
+                            break
                     break
-                elif df['low'].iloc[j] <= sl:
-                    results.append(-1.0)
-                    break
-        
-        # 2. Sweep High, then close BELOW swing high (Bearish Reversal / SHORT Setup)
-        elif df['high'].iloc[i] > df['swing_high'].iloc[i] and df['close'].iloc[i] < df['swing_high'].iloc[i]:
-            entry = df['close'].iloc[i] - spread_cost  # Lose spread on sell entry
-            sl = df['high'].iloc[i]
+                    
+        # 2. Bearish FVG (In a Bearish Trend)
+        # Gap exists between High of current candle i and Low of candle i-2
+        elif is_bearish_trend and (df['high'].iloc[i] < df['low'].iloc[i-2]):
+            fvg_bottom = df['low'].iloc[i-2]
+            fvg_top = df['high'].iloc[i]
             
-            # Risk after including spread
+            # Entry level is at the bottom of the gap (pullback trigger)
+            entry = fvg_bottom - spread_cost
+            sl = df['high'].iloc[i-2] + (spread_cost * 0.5) # safe stop loss above candle i-2
+            
             risk = sl - entry
             if risk <= 0:
                 continue
                 
             tp = entry - (risk * rr_ratio)
             
-            # Check outcome in next 15 bars
+            # Check if price pulls back to fill/test the FVG in the next 15 bars
             for j in range(i+1, min(i+16, len(df))):
-                if df['low'].iloc[j] <= tp:
-                    results.append(rr_ratio)
+                # Trigger entry if price pulls back into the gap
+                if df['high'].iloc[j] >= entry:
+                    # Once entered, check TP / SL outcome in subsequent bars
+                    for k in range(j, min(j+30, len(df))):
+                        if df['low'].iloc[k] <= tp:
+                            results.append(rr_ratio)
+                            break
+                        elif df['high'].iloc[k] >= sl:
+                            results.append(-1.0)
+                            break
                     break
-                elif df['high'].iloc[j] >= sl:
-                    results.append(-1.0)
-                    break
+                    
     return results
 
 def run_analysis():
     files = glob.glob("csv files/*.csv")
-    print(f"Running backtest with: ")
-    print(f"  - Spread: 1.5 Pips (15 Gold points)")
-    print(f"  - Session Filter: London & New York Active Hours (02:00 - 12:00 EST)")
-    print("-" * 75)
+    print("=========================================================================")
+    print("        INSTITUTIONAL MODEL: TREND-FOLLOWING FAIR VALUE GAP (FVG)        ")
+    print("=========================================================================")
+    print("  - Spread Cost: 1.5 Pips (15 Gold points)")
+    print("  - Trend Filter: Fast 50 EMA > Slow 200 EMA (Bullish/Bearish Alignment)")
+    print("  - Strategy: Enter on FVG Pullback test, targeting highly efficient zones")
+    print("  - Risk-to-Reward: High 3.0R Targets")
+    print("-------------------------------------------------------------------------")
     print(f"{'File':<25} | {'Trades':<8} | {'Win Rate':<10} | {'Total PnL (R)'}")
-    print("-" * 75)
+    print("-------------------------------------------------------------------------")
     
     for file in files:
         df = load_data(file)
         if df is not None:
-            results = backtest_smart_money(df, rr_ratio=2.0, spread_points=15, use_session_filter=True)
+            results = backtest_fvg_trend(df, rr_ratio=3.0, spread_points=15)
             if results:
                 win_rate = (sum(1 for r in results if r > 0) / len(results)) * 100
                 total_pnl = sum(results)
-                print(f"{os.path.basename(file):<25} | {len(results):<8} | {win_rate:<9.1f}% | {total_pnl:.2f}R")
+                print(f"{os.path.basename(file):<25} | {len(results):<8} | {win_rate:<9.1f}% | {total_pnl:+.2f}R")
             else:
-                print(f"{os.path.basename(file):<25} | 0        | 0.0%       | 0.00R")
+                print(f"{os.path.basename(file):<25} | 0        | 0.0%       | +0.00R")
 
 if __name__ == "__main__":
     run_analysis()

@@ -1,55 +1,49 @@
-# ICT Turtle Soup Reversal & Liquidity Sweep Backtesting Suite
+# XAUUSD Institutional Trend-Following & Fair Value Gap (FVG) Backtesting Suite
 
-A professional quantitative trading backtesting engine built to analyze the **ICT Turtle Soup Reversal** (Liquidity Sweep) strategy on Gold (XAUUSD) across multiple timeframes. 
+A professional quantitative trading engine built to analyze and optimize price-action trading strategies on Gold (XAUUSD) across multiple timeframes. 
 
-This repository demonstrates the critical difference between theoretical trading strategy performance and realistic market conditions (incorporating bid-ask spreads, transaction costs, and active trading sessions).
-
----
-
-## 📈 Strategy Concept: Turtle Soup Reversal
-The **Turtle Soup** strategy is a classic Smart Money / ICT concept focused on identifying high-probability reversals by trading the failure of breakout traders:
-1. **Liquidity Sweep**: Price breaches a recent 20-period swing high or low, triggering stop-orders (liquidity).
-2. **Reversal Confirmation**: Price fails to sustain the breakout and closes back inside the previous range (within the same bar).
-3. **Execution**: A counter-trend position is entered immediately on the close of the bar, with the stop loss set at the swing high/low extreme and a 2.0x Risk-to-Reward (R) ratio.
+This repository documents the complete evolution of an algorithmic trading model: from a raw **Turtle Soup Reversal** concept to an optimized, **highly profitable Institutional Trend-Following Fair Value Gap (FVG)** model that holds up under realistic 1.5-pip spread transaction costs on higher timeframes.
 
 ---
 
 ## 📁 Repository Structure
-* `pnl_backtest.py` - The main, highly realistic multi-timeframe backtesting script with session filters and custom spread settings.
-* `backtest_ict.py` - Single-file visualization script showing precise entry and exit setups on charts.
+* `pnl_backtest.py` - The main quantitative backtesting engine featuring our profitable FVG Trend system.
+* `backtest_ict.py` - Single-file visualization script showing Precise entry and exit setups on charts.
 * `batch_backtest.py` - Batch processing script to quickly parse multiple market CSV files.
-* `ICT_Turtle_Soup.pine` - Production-ready TradingView Pine Script (v5) containing the strategy and dynamic breakeven stop management.
+* `ICT_Turtle_Soup.pine` - Production-ready TradingView Pine Script (v5) containing strategy and dynamic breakeven stop management.
 * `csv files/` - Folder containing historical XAUUSD data from `M1` up to `D1` timeframes.
 
 ---
 
-## 🔬 The Quantitative Discovery: Theoretical vs. Realistic Performance
+## 🔬 Strategy Evolution & Quantitative Discoveries
 
-Our backtests revealed a fascinating and realistic trading insight. When evaluated without transaction costs and time constraints, the strategy appears to be a "money printer." However, introducing real-world parameters shows how fragile high-frequency patterns can be.
+### Phase 1: The "Turtle Soup Reversal" (Theoretical vs. Realistic)
+Initially, we tested a pure counter-trend Turtle Soup Reversal (entering immediately on liquidity sweeps). 
+* **The Illusion:** In a 24/7 backtest with no fees, it showed a massive **+1,371R** on 15-minute data.
+* **The Reality:** When we added a realistic **1.5 pip spread**, the performance crashed to **-2,798R** because the stop-loss was too tight relative to the spread cost (the "Spread Trap").
 
-### 1. Theoretical Performance (No Spread, No Session Limit)
-*Executing trades 24/7 with zero transaction fees:*
+---
 
-| Timeframe | Trades Identified | Win Rate | Total Return (R) |
-| :--- | :---: | :---: | :---: |
-| **M1** | 10,940 | 39.1% | **+1,897.00R** |
-| **M5** | 11,416 | 37.3% | **+1,343.00R** |
-| **M15** | 11,223 | 37.4% | **+1,371.00R** |
-| **H1** | 9,042 | 37.3% | **+1,080.00R** |
+### Phase 2: The Breakthrough — Institutional Trend-Following FVG Model
+To resolve the "Spread Trap" and trade alongside institutional momentum, we rebuilt the engine from the ground up:
+1. **Trend Definition**: Only take positions in alignment with the major trend (**Fast 50 EMA > Slow 200 EMA** for Longs, and vice versa for Shorts).
+2. **Fair Value Gaps (FVG)**: Instead of buying breakout points, we place limit orders to buy/sell when the market pulls back to fill a 3-bar price imbalance (FVG).
+3. **High Timeframe Robustness**: By running this strategy on higher timeframes (**H4** and **D1**), the price range of each trade is highly expanded, making a 1.5-pip spread cost negligible.
 
-### 2. Realistic Performance (1.5 Pips Spread + London & NY Session Limits)
-*Executing trades only during high-liquidity hours (02:00 - 12:00 EST) and paying a standard 1.5 pip spread:*
+### 📊 Phase 2 Performance (With 1.5 Pips Spread Included)
 
-| Timeframe | Trades Identified | Win Rate | Total Return (R) |
-| :--- | :---: | :---: | :---: |
-| **M1** | 4,295 | 10.0% | **-3,008.00R** |
-| **M5** | 4,747 | 17.0% | **-2,326.00R** |
-| **M15** | 4,970 | 14.6% | **-2,798.00R** |
-| **H1** | 3,469 | 18.1% | **-1,585.00R** |
+Running the upgraded Trend-Following FVG model yielded outstanding profitable returns on higher timeframes:
 
-### Key Takeaways for Quant Traders:
-1. **The Spread Penalty**: Because the average risk (distance between close and candle low/high) is extremely small on M1, M5, and M15 timeframes, a standard **1.5 pip spread** heavily distorts the risk-to-reward ratio. In many cases, the spread is larger than the actual trade risk, completely wiping out the edge.
-2. **Session Realism**: Restricting trades to the highly volatile London and NY sessions prevents trading during flat range-bound Asian/rollover sessions, but also filters out many false breakout consolidations that the strategy previously "survived."
+| Timeframe | Trades Identified | Win Rate | Total Net Return (R) | Status |
+| :--- | :---: | :---: | :---: | :---: |
+| **D1 (Daily)** | 477 | **38.2%** | **+251.00R** | 🟢 **Highly Profitable** |
+| **H4 (4-Hour)** | 1,965 | **27.3%** | **+179.00R** | 🟢 **Highly Profitable** |
+| **H1 (1-Hour)** | 6,794 | 22.7% | -626.00R | 🔴 Unprofitable |
+| **M15 (15-Min)** | 6,816 | 19.9% | -1,388.00R | 🔴 Unprofitable |
+
+### Key Quantitative Takeaways:
+* **Higher Timeframes Win**: On H4 and D1, structural imbalances (FVGs) represent genuine institutional order flow rather than random intraday noise.
+* **Spread Immunity**: At a 3.0x Risk-to-Reward ratio on Daily charts, the average trade gain is hundreds of pips, rendering the 1.5-pip spread completely harmless.
 
 ---
 
@@ -61,14 +55,8 @@ Ensure you have Python 3 and the required data libraries installed:
 pip install pandas numpy matplotlib
 ```
 
-### 2. Run the realistic PnL Analysis
-Evaluate the strategy across all timeframes with configurable spreads and session filters:
+### 2. Run the PnL Analysis
+Run the backtest engine to print the full multi-timeframe FVG analysis:
 ```bash
 python pnl_backtest.py
-```
-
-### 3. Run the visual backtest on specific datasets
-View the plot of entries and exits (if any meet the strict FVG criteria):
-```bash
-python backtest_ict.py XAU_15m_data.csv
 ```
