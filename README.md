@@ -8,6 +8,7 @@ This repository documents the complete evolution of an algorithmic trading model
 
 ## 📁 Repository Structure
 * `pnl_backtest.py` - The main quantitative backtesting engine featuring our profitable FVG Trend system.
+* `orderblock_backtest.py` - Institutional Order Block & Liquidity Sweep backtest engine.
 * `backtest_ict.py` - Single-file visualization script showing Precise entry and exit setups on charts.
 * `batch_backtest.py` - Batch processing script to quickly parse multiple market CSV files.
 * `ICT_Turtle_Soup.pine` - Production-ready TradingView Pine Script (v5) containing strategy and dynamic breakeven stop management.
@@ -44,6 +45,20 @@ Running the upgraded Trend-Following FVG model yielded outstanding profitable re
 ### Key Quantitative Takeaways:
 * **Higher Timeframes Win**: On H4 and D1, structural imbalances (FVGs) represent genuine institutional order flow rather than random intraday noise.
 * **Spread Immunity**: At a 3.0x Risk-to-Reward ratio on Daily charts, the average trade gain is hundreds of pips, rendering the 1.5-pip spread completely harmless.
+
+---
+
+### Phase 3: Institutional Order Block & Liquidity Sweep Engine
+We expanded the strategy suite to combine **Liquidity Sweep Detection** (Turtle Soup sweeps of 20-period swing highs/lows) with **Order Block Mitigation** and **ATR Volatility Stop Protection**:
+
+| Timeframe | Trades Identified | Win Rate | Profit Factor | Net Return (R) | Status |
+| :--- | :---: | :---: | :---: | :---: | :--- |
+| **D1 (Daily)** | 188 | **25.5%** | **1.03** | **+4.00R** | 🟢 **Profitable** |
+| **H4 (4-Hour)** | 981 | 15.5% | 0.55 | -373.00R | 🔴 Unprofitable |
+| **H1 (1-Hour)** | 3,315 | 10.9% | 0.37 | -1,871.00R | 🔴 Unprofitable |
+| **M30 (30-Min)** | 3,906 | 10.1% | 0.34 | -2,322.00R | 🔴 Unprofitable |
+| **M15 (15-Min)** | 4,203 | 10.8% | 0.36 | -2,387.00R | 🔴 Unprofitable |
+| **M5 (5-Min)** | 4,342 | 10.9% | 0.37 | -2,442.00R | 🔴 Unprofitable |
 
 ---
 
