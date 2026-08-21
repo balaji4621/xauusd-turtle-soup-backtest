@@ -60,3 +60,20 @@ Run the backtest engine to print the full multi-timeframe FVG analysis:
 ```bash
 python pnl_backtest.py
 ```
+
+---
+
+## ⚙️ Strategy Configuration & Risk Management Parameters
+
+The backtesting parameters can be customized directly inside `pnl_backtest.py` or `batch_backtest.py`:
+
+| Parameter | Default Value | Description |
+| :--- | :---: | :--- |
+| `rr_ratio` | `3.0` | Target Risk-to-Reward ratio for take-profit targets |
+| `spread_points` | `15` | Simulated transaction cost spread (1.5 pips for XAUUSD) |
+| `ema_fast` | `50` | Fast Exponential Moving Average for trend direction filter |
+| `ema_slow` | `200` | Slow Exponential Moving Average for long-term trend baseline |
+
+### Recommended Settings for XAUUSD:
+- **Daily / 4-Hour Timeframe**: Use `rr_ratio = 3.0` with `spread_points = 15` for optimal risk-adjusted returns.
+- **1-Hour Timeframe**: Increase minimum FVG gap height to filter out noise caused by intraday volatility.
