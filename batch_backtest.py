@@ -1,52 +1,94 @@
 import pandas as pd
 import glob
+import os
+import argparse
+import logging
+from concurrent.futures import ProcessPoolExecutor, as_completed
+
+# Setup logging configuration
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[
+        logging.StreamHandler()
+    ]
+)
 
 def load_data(filepath):
-    """Loads CSV files, automatically detecting if there is a header or not."""
+    """Loads CSV files, automatically detecting format and columns."""
     try:
-        # Using sep=None and engine='python' to auto-detect the separator (comma or semicolon)
         df = pd.read_csv(filepath, sep=None, engine='python')
-        
-        # If the first row is a header, columns will be names. 
-        # If not, they will be 0, 1, 2...
-        # Let's force standard names if the detection seems wrong.
         if len(df.columns) == 6:
             df.columns = ['date', 'open', 'high', 'low', 'close', 'volume']
         
-        df['date'] = pd.to_datetime(df['date'], format='mixed')
-        df.set_index('date', inplace=True)
+        date_col = [c for c in df.columns if 'date' in c.lower()][0]
+        df[date_col] = pd.to_datetime(df[date_col], format='mixed')
+        df.set_index(date_col, inplace=True)
         return df[['open', 'high', 'low', 'close']].sort_index()
     except Exception as e:
-        print(f"Error loading {filepath}: {e}")
+        logging.error(f"Failed to load {filepath}: {e}")
         return None
 
-def backtest_ict(df):
-    """Loose logic to identify if the strategy/data is working."""
+def backtest_ict(df, swing_period=20):
+    """Identifies liquidity sweep setup entries with configurable swing lookback."""
     trades = []
-    # Using a 20-period lookback for liquidity
-    df['swing_high'] = df['high'].rolling(20).max().shift(1)
-    df['swing_low'] = df['low'].rolling(20).min().shift(1)
+    df['swing_high'] = df['high'].rolling(swing_period).max().shift(1)
+    df['swing_low'] = df['low'].rolling(swing_period).min().shift(1)
     
-    for i in range(20, len(df)):
+    for i in range(swing_period, len(df)):
         row = df.iloc[i]
-        # Bullish: Price closed above the 20-period high
         if row['close'] > df['swing_high'].iloc[i]:
-            trades.append({'type': 'LONG'})
-        # Bearish: Price closed below the 20-period low
+            trades.append({'type': 'LONG', 'price': row['close'], 'time': str(row.name)})
         elif row['close'] < df['swing_low'].iloc[i]:
-            trades.append({'type': 'SHORT'})
+            trades.append({'type': 'SHORT', 'price': row['close'], 'time': str(row.name)})
     return trades
 
-def run_batch():
-    files = glob.glob("*.csv") + glob.glob("csv files/*.csv")
-    print(f"Processing {len(files)} files...")
-    for file in files:
-        df = load_data(file)
-        if df is not None:
-            trades = backtest_ict(df)
-            print(f"{file}: {len(trades)} trades identified")
-        else:
-            print(f"Failed to process: {file}")
+def process_file_task(args_tuple):
+    filepath, swing_period = args_tuple
+    df = load_data(filepath)
+    if df is not None:
+        trades = backtest_ict(df, swing_period=swing_period)
+        return filepath, len(trades), True
+    return filepath, 0, False
+
+def run_batch(swing_period=20, parallel=True, workers=4):
+    files = list(set(glob.glob("*.csv") + glob.glob("csv files/*.csv")))
+    logging.info(f"Initiating batch processing across {len(files)} dataset files...")
+    logging.info(f"Configuration: Swing Period={swing_period}, Parallel={parallel}, Max Workers={workers}")
+    
+    results = {}
+    if parallel and len(files) > 1:
+        tasks = [(f, swing_period) for f in files]
+        with ProcessPoolExecutor(max_workers=min(workers, len(files))) as executor:
+            future_map = {executor.submit(process_file_task, task): task[0] for task in tasks}
+            for future in as_completed(future_map):
+                filepath, trade_count, success = future.result()
+                if success:
+                    results[filepath] = trade_count
+                    logging.info(f"Completed {os.path.basename(filepath)}: {trade_count} trades identified")
+                else:
+                    logging.warning(f"Failed processing {filepath}")
+    else:
+        for file in files:
+            filepath, trade_count, success = process_file_task((file, swing_period))
+            if success:
+                results[filepath] = trade_count
+                logging.info(f"Completed {os.path.basename(filepath)}: {trade_count} trades identified")
+            else:
+                logging.warning(f"Failed processing {filepath}")
+
+    print("\n" + "="*60)
+    print(f"{'Filename':<35} | {'Trades Identified':<20}")
+    print("="*60)
+    for fname, count in results.items():
+        print(f"{os.path.basename(fname):<35} | {count:<20}")
+    print("="*60 + "\n")
 
 if __name__ == "__main__":
-    run_batch()
+    parser = argparse.ArgumentParser(description="Batch High-Performance ICT Strategy Runner")
+    parser.add_argument("--swing-period", type=int, default=20, help="Swing lookback period (default: 20)")
+    parser.add_argument("--no-parallel", action="store_true", help="Disable multiprocessing parallel execution")
+    parser.add_argument("--workers", type=int, default=4, help="Maximum parallel worker processes (default: 4)")
+    args = parser.parse_args()
+
+    run_batch(swing_period=args.swing_period, parallel=not args.no_parallel, workers=args.workers)
