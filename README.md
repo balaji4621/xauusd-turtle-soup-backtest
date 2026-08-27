@@ -35,12 +35,15 @@ To resolve the "Spread Trap" and trade alongside institutional momentum, we rebu
 
 Running the upgraded Trend-Following FVG model yielded outstanding profitable returns on higher timeframes:
 
-| Timeframe | Trades Identified | Win Rate | Total Net Return (R) | Status |
-| :--- | :---: | :---: | :---: | :---: |
-| **D1 (Daily)** | 477 | **38.2%** | **+251.00R** | 🟢 **Highly Profitable** |
-| **H4 (4-Hour)** | 1,965 | **27.3%** | **+179.00R** | 🟢 **Highly Profitable** |
-| **H1 (1-Hour)** | 6,794 | 22.7% | -626.00R | 🔴 Unprofitable |
-| **M15 (15-Min)** | 6,816 | 19.9% | -1,388.00R | 🔴 Unprofitable |
+| Timeframe | Trades | Win Rate | Total Net Return (R) | Max Drawdown | Profit Factor | Sharpe Ratio | Status |
+| :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
+| **D1 (Daily)** | 477 | **38.2%** | **+251.00R** | **18.00R** | **1.85** | **5.91** | 🟢 **Highly Profitable** |
+| **H4 (4-Hour)** | 1,965 | **27.3%** | **+179.00R** | **91.00R** | **1.13** | **2.27** | 🟢 **Highly Profitable** |
+| **H1 (1-Hour)** | 6,794 | 22.7% | -626.00R | 763.00R | 0.88 | -4.53 | 🔴 Unprofitable |
+| **M30 (30-Min)**| 6,817 | 21.3% | -1,021.00R | 1,277.00R | 0.81 | -7.56 | 🔴 Unprofitable |
+| **M15 (15-Min)**| 6,816 | 19.9% | -1,388.00R | 1,450.00R | 0.75 | -10.53 | 🔴 Unprofitable |
+| **M5 (5-Min)**  | 7,300 | 20.4% | -1,356.00R | 1,420.00R | 0.77 | -9.85 | 🔴 Unprofitable |
+| **M1 (1-Min)**  | 7,335 | 14.4% | -3,111.00R | 3,115.00R | 0.50 | -25.87 | 🔴 Unprofitable |
 
 ### Key Quantitative Takeaways:
 * **Higher Timeframes Win**: On H4 and D1, structural imbalances (FVGs) represent genuine institutional order flow rather than random intraday noise.
@@ -62,18 +65,40 @@ We expanded the strategy suite to combine **Liquidity Sweep Detection** (Turtle 
 
 ---
 
-## 🚀 How to Run the Backtests
+## 🚀 How to Run the Backtests & Utilities
 
 ### 1. Requirements
-Ensure you have Python 3 and the required data libraries installed:
+Ensure you have Python 3 and the required dependencies installed:
 ```bash
-pip install pandas numpy matplotlib
+pip install -r requirements.txt
 ```
 
-### 2. Run the PnL Analysis
-Run the backtest engine to print the full multi-timeframe FVG analysis:
+### 2. Main PnL Backtest Engine (`pnl_backtest.py`)
+Run the full quantitative backtest engine with customizable parameters and JSON/CSV trade log exports:
 ```bash
+# Run default analysis (3.0R target, 1.5 pip spread)
 python pnl_backtest.py
+
+# Custom R:R ratio, spread, and export trade log to JSON
+python pnl_backtest.py --rr 2.5 --spread 20 --risk-usd 200 --export-json results.json
+```
+
+### 3. High-Performance Multiprocessing Batch Runner (`batch_backtest.py`)
+Execute parallel strategy sweeps across all dataset timeframes using process pools:
+```bash
+python batch_backtest.py --swing-period 25 --workers 4
+```
+
+### 4. Single-File Visual Backtester (`backtest_ict.py`)
+Generate chart entries and export scatter plots:
+```bash
+python backtest_ict.py XAUUSD_D1.csv --rr 2.0 --save-plot chart.png --no-show
+```
+
+### 5. Data Integrity & Timestamp Auditor (`check_date.py`)
+Audit historical CSV datasets for missing values, zero prices, duplicate timestamps, and date ranges:
+```bash
+python check_date.py XAUUSD_D1.csv --start-date 2020-01-01 --end-date 2026-01-01
 ```
 
 ---
