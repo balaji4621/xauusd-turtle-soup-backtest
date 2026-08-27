@@ -1,23 +1,46 @@
 //@version=5
-strategy("ICT Turtle Soup - Final Combined", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=1)
+strategy("ICT Turtle Soup & FVG Institutional - Enhanced", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=1)
 
 // --- Inputs ---
-swing_len = input.int(20, "Swing Length")
-rr_ratio = input.float(2.0, "Take Profit (R)")
-be_trigger = input.float(0.5, "Breakeven Trigger (R)")
+swing_len       = input.int(20, "Swing Length", group="Strategy Parameters")
+rr_ratio        = input.float(3.0, "Take Profit (R)", group="Strategy Parameters")
+be_trigger      = input.float(1.0, "Breakeven Trigger (R)", group="Strategy Parameters")
+
+// --- Trend & Indicator Filters ---
+use_trend_filter = input.bool(true, "Enable EMA Trend Alignment Filter", group="Trend Filter")
+fast_ema_len     = input.int(50, "Fast EMA Length", group="Trend Filter")
+slow_ema_len     = input.int(200, "Slow EMA Length", group="Trend Filter")
+
+// --- Session Filter ---
+use_session      = input.bool(true, "Enforce Session Hours Filter", group="Session Filter")
+session_time     = input.session("0930-1600:2345", "Trading Session (EST)", group="Session Filter")
+
+// --- Technical Indicators ---
+fast_ema = ta.ema(close, fast_ema_len)
+slow_ema = ta.ema(close, slow_ema_len)
+
+is_bullish_trend = not use_trend_filter or (fast_ema > slow_ema)
+is_bearish_trend = not use_trend_filter or (fast_ema < slow_ema)
+
+in_session = not use_session or not na(time(timeframe.period, session_time))
 
 // --- Variables to track management ---
 var float entry_price = 0.0
-var float stop_loss = 0.0
-var bool is_be = false
+var float stop_loss   = 0.0
+var bool  is_be       = false
 
-// --- ICT Logic ---
+// --- ICT Liquidity Logic ---
 swing_high = ta.highest(high[1], swing_len)
-swing_low = ta.lowest(low[1], swing_len)
+swing_low  = ta.lowest(low[1], swing_len)
 
-// Turtle Soup Reversal: Sweep and close back inside
-is_sweep_low = low < swing_low and close > swing_low
-is_sweep_high = high > swing_high and close < swing_high
+is_sweep_low  = low < swing_low and close > swing_low and is_bullish_trend and in_session
+is_sweep_high = high > swing_high and close < swing_high and is_bearish_trend and in_session
+
+// --- Plot Indicator Overlays ---
+plot(fast_ema, "Fast EMA 50", color=color.blue, linewidth=2)
+plot(slow_ema, "Slow EMA 200", color=color.orange, linewidth=2)
+plot(swing_high, "Swing High", color=color.red, style=plot.style_circles)
+plot(swing_low, "Swing Low", color=color.green, style=plot.style_circles)
 
 // --- Trade Execution ---
 if strategy.position_size == 0
@@ -26,21 +49,22 @@ if strategy.position_size == 0
         entry_price := close
         stop_loss := low
         float risk = entry_price - stop_loss
-        strategy.entry("Long", strategy.long)
-        strategy.exit("Exit Long", "Long", stop=stop_loss, limit=entry_price + (risk * rr_ratio))
+        if risk > 0
+            strategy.entry("Long", strategy.long)
+            strategy.exit("Exit Long", "Long", stop=stop_loss, limit=entry_price + (risk * rr_ratio))
         
     if is_sweep_high
         entry_price := close
         stop_loss := high
         float risk = stop_loss - entry_price
-        strategy.entry("Short", strategy.short)
-        strategy.exit("Exit Short", "Short", stop=stop_loss, limit=entry_price - (risk * rr_ratio))
+        if risk > 0
+            strategy.entry("Short", strategy.short)
+            strategy.exit("Exit Short", "Short", stop=stop_loss, limit=entry_price - (risk * rr_ratio))
 
-// --- Breakeven Management ---
+// --- Dynamic Breakeven Management ---
 if strategy.position_size != 0 and not is_be
     float risk = math.abs(entry_price - stop_loss)
     
-    // Check if price moved 0.5R in our favor
     if strategy.position_size > 0 and (close - entry_price) >= (risk * be_trigger)
         strategy.exit("Exit Long", "Long", stop=entry_price)
         is_be := true
