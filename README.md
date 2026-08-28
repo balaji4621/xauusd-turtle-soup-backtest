@@ -98,7 +98,19 @@ python backtest_ict.py XAUUSD_D1.csv --rr 2.0 --save-plot chart.png --no-show
 ### 5. Data Integrity & Timestamp Auditor (`check_date.py`)
 Audit historical CSV datasets for missing values, zero prices, duplicate timestamps, and date ranges:
 ```bash
-python check_date.py XAUUSD_D1.csv --start-date 2020-01-01 --end-date 2026-01-01
+python check_date.py XAUUSD_D1.csv --start-date 2020-01-01 --end-date 2026-01-01 --export-summary audit.json
+```
+
+### 6. Multi-Strategy Quantitative Benchmark (`strategy_comparison.py`)
+Run head-to-head performance benchmarks comparing FVG Trend vs Order Block strategies across timeframes:
+```bash
+python strategy_comparison.py --rr 3.0 --spread 15
+```
+
+### 7. Automated Unit Testing
+Execute the unit test suite to verify indicator calculations and data loader integrity:
+```bash
+python -m unittest discover -s tests
 ```
 
 ---
