@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 import os
 import sys
+import argparse
+import json
 
 def load_data(filepath):
     try:
@@ -64,9 +66,9 @@ def backtest_ob_liquidity_fast(df, rr_ratio=3.0, spread_points=15, swing_lookbac
         first_sl = hit_sl[0] if len(hit_sl) > 0 else 999
         
         if first_tp < first_sl:
-            results.append(rr_ratio)
+            results.append({'type': 'LONG', 'pnl_r': rr_ratio, 'entry': entry, 'sl': sl, 'tp': tp})
         elif first_sl < first_tp:
-            results.append(-1.0)
+            results.append({'type': 'LONG', 'pnl_r': -1.0, 'entry': entry, 'sl': sl, 'tp': tp})
             
     for i in bear_signals:
         if i < swing_lookback + 5 or i >= n - 20:
@@ -89,16 +91,22 @@ def backtest_ob_liquidity_fast(df, rr_ratio=3.0, spread_points=15, swing_lookbac
         first_sl = hit_sl[0] if len(hit_sl) > 0 else 999
         
         if first_tp < first_sl:
-            results.append(rr_ratio)
+            results.append({'type': 'SHORT', 'pnl_r': rr_ratio, 'entry': entry, 'sl': sl, 'tp': tp})
         elif first_sl < first_tp:
-            results.append(-1.0)
+            results.append({'type': 'SHORT', 'pnl_r': -1.0, 'entry': entry, 'sl': sl, 'tp': tp})
             
     return results
 
-def run_suite():
+def run_suite(args=None):
+    rr_target = args.rr if args else 3.0
+    spread_pts = args.spread if args else 15
+    swing_period = args.swing_lookback if args else 20
+
     print("=" * 70)
     print("  INSTITUTIONAL ORDER BLOCK & LIQUIDITY SWEEP BACKTEST (XAUUSD)")
     print("=" * 70)
+    print(f" Target R:R: {rr_target}R | Spread: {spread_pts/10.0} pips | Swing: {swing_period} bars")
+    print("-" * 70)
     
     files = {
         "D1 (Daily)": "csv files/XAUUSD_D1.csv",
@@ -111,6 +119,7 @@ def run_suite():
     
     base_dir = os.path.dirname(os.path.abspath(__file__))
     summary_data = []
+    export_dict = {}
 
     for name, rel_path in files.items():
         full_path = os.path.join(base_dir, rel_path)
@@ -121,15 +130,17 @@ def run_suite():
         if df is None or len(df) == 0:
             continue
             
-        results = backtest_ob_liquidity_fast(df, rr_ratio=3.0, spread_points=15)
-        total_trades = len(results)
+        trades = backtest_ob_liquidity_fast(df, rr_ratio=rr_target, spread_points=spread_pts, swing_lookback=swing_period)
+        export_dict[name] = trades
+        total_trades = len(trades)
         
         if total_trades > 0:
+            results = [t['pnl_r'] for t in trades]
             wins = sum(1 for r in results if r > 0)
             losses = sum(1 for r in results if r < 0)
             win_rate = (wins / total_trades) * 100
             total_r = sum(results)
-            gross_win = wins * 3.0
+            gross_win = wins * rr_target
             gross_loss = losses * 1.0
             profit_factor = (gross_win / gross_loss) if gross_loss > 0 else 99.0
             status = "[PROFITABLE]" if total_r > 0 else "[LOSS]"
@@ -150,5 +161,17 @@ def run_suite():
     print("\n" + summary_df.to_string(index=False) + "\n")
     print("=" * 70)
 
+    if args and args.export_json:
+        with open(args.export_json, 'w') as f:
+            json.dump(export_dict, f, indent=2)
+        print(f"[+] Exported order block backtest results to: {args.export_json}")
+
 if __name__ == "__main__":
-    run_suite()
+    parser = argparse.ArgumentParser(description="Order Block & Liquidity Sweep Backtest")
+    parser.add_argument("--rr", type=float, default=3.0, help="Target Risk-to-Reward ratio (default: 3.0)")
+    parser.add_argument("--spread", type=int, default=15, help="Spread cost in points/pips (default: 15)")
+    parser.add_argument("--swing-lookback", type=int, default=20, help="Swing lookback period (default: 20)")
+    parser.add_argument("--export-json", type=str, default=None, help="Path to export JSON trade log")
+    args = parser.parse_args()
+    
+    run_suite(args)
