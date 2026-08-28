@@ -143,9 +143,17 @@ def run_suite(args=None):
             gross_win = wins * rr_target
             gross_loss = losses * 1.0
             profit_factor = (gross_win / gross_loss) if gross_loss > 0 else 99.0
+            
+            # Risk & Equity metrics
+            cum_pnl = np.cumsum(results)
+            peak = np.maximum.accumulate(cum_pnl)
+            max_dd = float(np.max(peak - cum_pnl)) if len(cum_pnl) > 0 else 0.0
+            std_dev = np.std(results)
+            sharpe = float((np.mean(results) / std_dev) * np.sqrt(total_trades)) if std_dev > 0 and total_trades > 1 else 0.0
+            
             status = "[PROFITABLE]" if total_r > 0 else "[LOSS]"
         else:
-            wins, losses, win_rate, total_r, profit_factor = 0, 0, 0.0, 0.0, 0.0
+            wins, losses, win_rate, total_r, profit_factor, max_dd, sharpe = 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0
             status = "[NO TRADES]"
 
         summary_data.append({
@@ -154,6 +162,8 @@ def run_suite(args=None):
             "Win Rate": f"{win_rate:.1f}%",
             "Profit Factor": f"{profit_factor:.2f}",
             "Net Return (R)": f"{total_r:+.2f}R",
+            "Max DD (R)": f"{max_dd:.2f}R",
+            "Sharpe": f"{sharpe:.2f}",
             "Status": status
         })
 
