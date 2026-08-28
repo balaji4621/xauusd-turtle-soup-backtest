@@ -1,10 +1,12 @@
 //@version=5
 strategy("ICT Turtle Soup & FVG Institutional - Enhanced", overlay=true, initial_capital=10000, default_qty_type=strategy.percent_of_equity, default_qty_value=1)
 
-// --- Inputs ---
+// --- Strategy Parameters ---
 swing_len       = input.int(20, "Swing Length", group="Strategy Parameters")
 rr_ratio        = input.float(3.0, "Take Profit (R)", group="Strategy Parameters")
 be_trigger      = input.float(1.0, "Breakeven Trigger (R)", group="Strategy Parameters")
+use_atr_padding = input.bool(true, "Use Dynamic ATR Stop Padding", group="Strategy Parameters")
+atr_multiplier  = input.float(0.5, "ATR Stop Loss Padding Multiplier", group="Strategy Parameters")
 
 // --- Trend & Indicator Filters ---
 use_trend_filter = input.bool(true, "Enable EMA Trend Alignment Filter", group="Trend Filter")
