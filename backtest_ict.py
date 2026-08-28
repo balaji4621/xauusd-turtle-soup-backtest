@@ -115,6 +115,17 @@ def plot_results(df, trades, save_path=None, show_plot=True):
         plt.show()
     plt.close()
 
+def select_preset_interactive():
+    """Provides interactive dataset preset selection when run without arguments."""
+    presets = {
+        "1": ("Daily (D1)", "csv files/XAUUSD_D1.csv"),
+        "2": ("4-Hour (H4)", "csv files/XAUUSD_H4.csv"),
+        "3": ("1-Hour (H1)", "csv files/XAUUSD_H1.csv"),
+        "4": ("15-Minute (M15)", "csv files/XAUUSD_M15.csv"),
+        "5": ("5-Minute (M5)", "csv files/XAUUSD_M5.csv")
+    }
+    return presets.get("1")[1]
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="ICT Strategy Single-File Visualization & Backtest")
     parser.add_argument("file", type=str, nargs="?", default="XAU_15m_data.csv", help="CSV file path to backtest")
@@ -125,11 +136,12 @@ if __name__ == "__main__":
     parser.add_argument("--no-show", action="store_true", help="Do not render interactive plot window")
     args = parser.parse_args()
     
-    df = load_data(args.file)
+    target_file = args.file if args.file else select_preset_interactive()
+    df = load_data(target_file)
     if df is not None:
         trades = backtest_ict(df, rr_ratio=args.rr, swing_period=args.swing_period, enforce_session=not args.all_hours)
-        print_trade_statistics(trades, args.file, args.rr)
+        print_trade_statistics(trades, target_file, args.rr)
         if len(trades) > 0:
             plot_results(df, trades, save_path=args.save_plot, show_plot=not args.no_show)
     else:
-        print(f"Could not load {args.file}. Please check the path.")
+        print(f"Could not load {target_file}. Please check the path.")
