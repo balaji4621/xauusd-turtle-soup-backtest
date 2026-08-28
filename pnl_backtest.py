@@ -188,7 +188,24 @@ def calculate_metrics(trades, risk_usd=100.0):
         'max_loss_streak': max_loss
     }
 
+def load_config(config_path="config.json"):
+    """Loads configuration settings from JSON file if available."""
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Warning: Failed to parse {config_path}: {e}")
+    return {}
+
 def run_analysis(args):
+    config = load_config(args.config) if hasattr(args, 'config') else {}
+    strat_cfg = config.get('strategy', {})
+    
+    rr_target = args.rr if (args.rr != 3.0 or 'rr_ratio' not in strat_cfg) else strat_cfg.get('rr_ratio', 3.0)
+    spread_pts = args.spread if (args.spread != 15 or 'spread_points' not in strat_cfg) else strat_cfg.get('spread_points', 15)
+    risk_val = args.risk_usd if (args.risk_usd != 100.0 or 'risk_usd_per_trade' not in strat_cfg) else strat_cfg.get('risk_usd_per_trade', 100.0)
+
     search_path = os.path.join(args.data_dir, "*.csv")
     files = glob.glob(search_path)
     if not files:
@@ -197,11 +214,11 @@ def run_analysis(args):
     print("==========================================================================================================")
     print("                      INSTITUTIONAL MODEL: TREND-FOLLOWING FAIR VALUE GAP (FVG)                          ")
     print("==========================================================================================================")
-    print(f"  - Spread Cost: {args.spread / 10.0} Pips ({args.spread} Gold points)")
+    print(f"  - Spread Cost: {spread_pts / 10.0} Pips ({spread_pts} Gold points)")
     print("  - Trend Filter: Fast 50 EMA > Slow 200 EMA (Bullish/Bearish Alignment)")
     print("  - Strategy: Enter on FVG Pullback test, targeting highly efficient zones")
-    print(f"  - Risk-to-Reward: High {args.rr}R Targets")
-    print(f"  - Risk per Trade: ${args.risk_usd:.2f}")
+    print(f"  - Risk-to-Reward: High {rr_target}R Targets")
+    print(f"  - Risk per Trade: ${risk_val:.2f}")
     print("----------------------------------------------------------------------------------------------------------")
     
     total_files = len(files)
@@ -212,8 +229,8 @@ def run_analysis(args):
         print_progress_bar(idx, total_files, prefix='Backtesting Progress', suffix=f'Processing: {os.path.basename(file)}', length=25)
         df = load_data(file)
         if df is not None:
-            trades = backtest_fvg_trend(df, rr_ratio=args.rr, spread_points=args.spread)
-            metrics_dict[os.path.basename(file)] = calculate_metrics(trades, risk_usd=args.risk_usd)
+            trades = backtest_fvg_trend(df, rr_ratio=rr_target, spread_points=spread_pts)
+            metrics_dict[os.path.basename(file)] = calculate_metrics(trades, risk_usd=risk_val)
             all_trades_export[os.path.basename(file)] = trades
         else:
             metrics_dict[os.path.basename(file)] = calculate_metrics([])
@@ -249,6 +266,7 @@ def run_analysis(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Institutional FVG Backtest Engine")
+    parser.add_argument("--config", type=str, default="config.json", help="Path to JSON configuration file")
     parser.add_argument("--rr", type=float, default=3.0, help="Risk-to-Reward ratio target (default: 3.0)")
     parser.add_argument("--spread", type=int, default=15, help="Spread cost in points/pips (default: 15)")
     parser.add_argument("--data-dir", type=str, default="csv files", help="Directory containing historical CSV data")
