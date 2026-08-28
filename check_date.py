@@ -2,8 +2,9 @@ import pandas as pd
 import argparse
 import os
 import sys
+import json
 
-def check_file_integrity(filepath, start_date=None, end_date=None):
+def check_file_integrity(filepath, start_date=None, end_date=None, export_json=None):
     if not os.path.exists(filepath):
         path_in_subdir = os.path.join("csv files", filepath)
         if os.path.exists(path_in_subdir):
@@ -38,15 +39,26 @@ def check_file_integrity(filepath, start_date=None, end_date=None):
         print(f" Total Data Bars:   {total_rows}")
 
         # Data Quality Checks
-        null_counts = df[['open', 'high', 'low', 'close']].isnull().sum().sum()
-        zero_counts = (df[['open', 'high', 'low', 'close']] <= 0).sum().sum()
-        duplicates = df.index.duplicated().sum()
+        null_counts = int(df[['open', 'high', 'low', 'close']].isnull().sum().sum())
+        zero_counts = int((df[['open', 'high', 'low', 'close']] <= 0).sum().sum())
+        duplicates = int(df.index.duplicated().sum())
 
         print("-------------------------------------------------------------------------")
         print(" DATA INTEGRITY METRICS:")
         print(f"  - Missing/NaN Values: {null_counts} {'[OK]' if null_counts == 0 else '[WARNING]'}")
         print(f"  - Zero/Negative Prices: {zero_counts} {'[OK]' if zero_counts == 0 else '[WARNING]'}")
         print(f"  - Duplicate Timestamps: {duplicates} {'[OK]' if duplicates == 0 else '[WARNING]'}")
+
+        summary = {
+            "file": filepath,
+            "start_timestamp": str(start_ts),
+            "end_timestamp": str(end_ts),
+            "duration_days": duration.days,
+            "total_bars": total_rows,
+            "null_values": null_counts,
+            "zero_prices": zero_counts,
+            "duplicate_timestamps": duplicates
+        }
 
         # Optional Date Range Filtering
         if start_date or end_date:
@@ -59,8 +71,14 @@ def check_file_integrity(filepath, start_date=None, end_date=None):
             print(f" FILTERED DATE RANGE ({start_date or 'Start'} to {end_date or 'End'}):")
             print(f"  - Filtered Bar Count: {len(filtered_df)}")
             print(f"  - Coverage: {(len(filtered_df) / total_rows) * 100:.2f}% of full dataset")
+            summary["filtered_bars"] = len(filtered_df)
 
         print("=========================================================================\n")
+
+        if export_json:
+            with open(export_json, 'w') as f:
+                json.dump(summary, f, indent=2)
+            print(f"[+] Exported dataset audit report summary to: {export_json}")
 
     except Exception as e:
         print(f"Error auditing file: {e}")
@@ -70,6 +88,7 @@ if __name__ == "__main__":
     parser.add_argument("file", type=str, nargs="?", default="XAUUSD_M5.csv", help="Target CSV file name")
     parser.add_argument("--start-date", type=str, default=None, help="Filter dataset from start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", type=str, default=None, help="Filter dataset up to end date (YYYY-MM-DD)")
+    parser.add_argument("--export-summary", type=str, default=None, help="Path to export audit summary JSON")
     args = parser.parse_args()
 
-    check_file_integrity(args.file, start_date=args.start_date, end_date=args.end_date)
+    check_file_integrity(args.file, start_date=args.start_date, end_date=args.end_date, export_json=args.export_summary)
