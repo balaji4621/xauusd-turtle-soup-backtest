@@ -1,0 +1,23 @@
+{
+  "strategy": {
+    "rr_ratio": 3.0,
+    "spread_points": 15,
+    "fast_ema": 50,
+    "slow_ema": 200,
+    "swing_lookback": 20,
+    "risk_usd_per_trade": 100.0,
+    "initial_capital": 10000.0
+  },
+  "sessions": {
+    "enforce_session": true,
+    "london_start_hour": 2,
+    "london_end_hour": 5,
+    "ny_am_start_hour": 9,
+    "ny_am_start_minute": 30,
+    "ny_am_end_hour": 11
+  },
+  "data": {
+    "default_dir": "csv files",
+    "supported_timeframes": ["D1", "H4", "H1", "M30", "M15", "M5", "M1"]
+  }
+}
