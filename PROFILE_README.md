@@ -39,7 +39,7 @@ class Developer:
 | Project | Description | Tech Stack |
 | :--- | :--- | :--- |
 | 📡 [**NRF24 Spectrum Scanner**](https://github.com/balaji4621/NRF24-Spectrum-Scanner) | Dual-radio 2.4GHz spectrum analyzer with ESP32 & NRF24L01+ for legal RF diagnostics | `C++`, `ESP32`, `RF` |
-| 📈 [**XAUUSD Backtest Engine**](https://github.com/balaji4621/xauusd-turtle-soup-backtest) | Quantitative backtesting suite for Gold trading with spread costs & institutional FVGs | `Python`, `Pandas`, `PineScript` |
+| 📈 [**XAUUSD Backtest Suite**](https://github.com/balaji4621/xauusd-turtle-soup-backtest) | Quantitative backtesting suite for Gold trading with spread costs, FVGs, & Order Blocks | `Python`, `Pandas`, `PineScript` |
 | 🎬 [**After Effects Mod**](https://github.com/balaji4621/aftereffectsmod) | Automation scripts & dynamic extensions for Adobe After Effects workflows | `JavaScript`, `ExtendScript` |
 
 ---
