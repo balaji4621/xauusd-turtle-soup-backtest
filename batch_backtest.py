@@ -3,7 +3,18 @@ import glob
 import os
 import argparse
 import logging
+import json
 from concurrent.futures import ProcessPoolExecutor, as_completed
+
+def load_config(config_path="config.json"):
+    """Loads configuration settings from JSON file if available."""
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r') as f:
+                return json.load(f)
+        except Exception as e:
+            logging.warning(f"Failed to read {config_path}: {e}")
+    return {}
 
 # Setup logging configuration
 logging.basicConfig(
@@ -86,9 +97,13 @@ def run_batch(swing_period=20, parallel=True, workers=4):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Batch High-Performance ICT Strategy Runner")
+    parser.add_argument("--config", type=str, default="config.json", help="Path to JSON configuration file")
     parser.add_argument("--swing-period", type=int, default=20, help="Swing lookback period (default: 20)")
     parser.add_argument("--no-parallel", action="store_true", help="Disable multiprocessing parallel execution")
     parser.add_argument("--workers", type=int, default=4, help="Maximum parallel worker processes (default: 4)")
     args = parser.parse_args()
 
-    run_batch(swing_period=args.swing_period, parallel=not args.no_parallel, workers=args.workers)
+    cfg = load_config(args.config)
+    swing_val = args.swing_period if (args.swing_period != 20 or 'strategy' not in cfg) else cfg.get('strategy', {}).get('swing_lookback', 20)
+
+    run_batch(swing_period=swing_val, parallel=not args.no_parallel, workers=args.workers)
