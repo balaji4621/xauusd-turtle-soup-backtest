@@ -174,7 +174,18 @@ def run_suite(args=None):
     if args and args.export_json:
         with open(args.export_json, 'w') as f:
             json.dump(export_dict, f, indent=2)
-        print(f"[+] Exported order block backtest results to: {args.export_json}")
+        print(f"[+] Exported order block backtest results to JSON: {args.export_json}")
+
+    if args and args.export_csv:
+        flat_list = []
+        for tf, trs in export_dict.items():
+            for t in trs:
+                t_copy = t.copy()
+                t_copy['timeframe'] = tf
+                flat_list.append(t_copy)
+        if flat_list:
+            pd.DataFrame(flat_list).to_csv(args.export_csv, index=False)
+            print(f"[+] Exported order block detailed trades log to CSV: {args.export_csv}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Order Block & Liquidity Sweep Backtest")
@@ -182,6 +193,7 @@ if __name__ == "__main__":
     parser.add_argument("--spread", type=int, default=15, help="Spread cost in points/pips (default: 15)")
     parser.add_argument("--swing-lookback", type=int, default=20, help="Swing lookback period (default: 20)")
     parser.add_argument("--export-json", type=str, default=None, help="Path to export JSON trade log")
+    parser.add_argument("--export-csv", type=str, default=None, help="Path to export CSV trade log")
     args = parser.parse_args()
     
     run_suite(args)
