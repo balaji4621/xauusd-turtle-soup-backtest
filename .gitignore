@@ -1,5 +1,13 @@
 csv files/
 *.csv
 __pycache__/
+.pytest_cache/
+.venv/
+venv/
+ENV/
 processed_data/
 results.html
+results.json
+audit.json
+*.png
+*.pyc
