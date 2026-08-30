@@ -9,6 +9,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from pnl_backtest import calculate_metrics, load_data, backtest_fvg_trend
 from orderblock_backtest import backtest_ob_liquidity_fast
+from strategy_comparison import run_benchmark
+from check_date import check_file_integrity
 
 class TestQuantStrategy(unittest.TestCase):
 
@@ -59,6 +61,17 @@ class TestQuantStrategy(unittest.TestCase):
             df = load_data(file_path)
             trades = backtest_ob_liquidity_fast(df, rr_ratio=3.0, spread_points=15)
             self.assertIsInstance(trades, list)
+
+    def test_strategy_comparison_benchmark(self):
+        file_path = os.path.join("csv files", "XAUUSD_D1.csv")
+        if os.path.exists(file_path):
+            results = run_benchmark(rr_ratio=3.0, spread_points=15)
+            self.assertIsNone(results)
+
+    def test_check_date_audit(self):
+        file_path = os.path.join("csv files", "XAUUSD_D1.csv")
+        if os.path.exists(file_path):
+            check_file_integrity(file_path)
 
 if __name__ == '__main__':
     unittest.main()
