@@ -89,6 +89,13 @@ if __name__ == "__main__":
     parser.add_argument("--start-date", type=str, default=None, help="Filter dataset from start date (YYYY-MM-DD)")
     parser.add_argument("--end-date", type=str, default=None, help="Filter dataset up to end date (YYYY-MM-DD)")
     parser.add_argument("--export-summary", type=str, default=None, help="Path to export audit summary JSON")
+    parser.add_argument("--all-files", action="store_true", help="Audit all CSV files in csv files/ folder")
     args = parser.parse_args()
 
-    check_file_integrity(args.file, start_date=args.start_date, end_date=args.end_date, export_json=args.export_summary)
+    if args.all_files:
+        import glob
+        files = glob.glob("csv files/*.csv")
+        for f in files:
+            check_file_integrity(f, start_date=args.start_date, end_date=args.end_date, export_json=args.export_summary)
+    else:
+        check_file_integrity(args.file, start_date=args.start_date, end_date=args.end_date, export_json=args.export_summary)
