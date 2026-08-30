@@ -2,10 +2,11 @@ import pandas as pd
 import numpy as np
 import os
 import argparse
+import json
 from pnl_backtest import backtest_fvg_trend, load_data
 from orderblock_backtest import backtest_ob_liquidity_fast
 
-def run_benchmark(rr_ratio=3.0, spread_points=15):
+def run_benchmark(rr_ratio=3.0, spread_points=15, export_json=None, export_csv=None):
     print("=" * 85)
     print("           QUANTITATIVE STRATEGY BENCHMARK COMPARISON ENGINE (XAUUSD)")
     print("=" * 85)
@@ -62,10 +63,21 @@ def run_benchmark(rr_ratio=3.0, spread_points=15):
     print("\n" + summary_df.to_string(index=False) + "\n")
     print("=" * 85)
 
+    if export_json:
+        with open(export_json, 'w') as f:
+            json.dump(comparison_rows, f, indent=2)
+        print(f"[+] Exported benchmark comparison matrix to JSON: {export_json}")
+
+    if export_csv:
+        summary_df.to_csv(export_csv, index=False)
+        print(f"[+] Exported benchmark comparison matrix to CSV: {export_csv}")
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Multi-Strategy Benchmark Engine")
     parser.add_argument("--rr", type=float, default=3.0, help="Target R:R ratio (default: 3.0)")
     parser.add_argument("--spread", type=int, default=15, help="Spread cost in points (default: 15)")
+    parser.add_argument("--export-json", type=str, default=None, help="Path to export benchmark JSON")
+    parser.add_argument("--export-csv", type=str, default=None, help="Path to export benchmark CSV")
     args = parser.parse_args()
 
-    run_benchmark(rr_ratio=args.rr, spread_points=args.spread)
+    run_benchmark(rr_ratio=args.rr, spread_points=args.spread, export_json=args.export_json, export_csv=args.export_csv)
