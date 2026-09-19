@@ -72,3 +72,5 @@ When adding or modifying trading strategies:
 
 By contributing, you agree that your contributions will be licensed under the same license as the project.## Contribution 93
 
+## Contribution 94
+
