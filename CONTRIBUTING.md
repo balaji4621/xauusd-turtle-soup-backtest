@@ -70,4 +70,5 @@ When adding or modifying trading strategies:
 
 ## 📜 License
 
-By contributing, you agree that your contributions will be licensed under the same license as the project.
+By contributing, you agree that your contributions will be licensed under the same license as the project.## Contribution 93
+
